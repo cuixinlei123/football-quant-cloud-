@@ -1,0 +1,11 @@
+name: 运行我的脚本
+
+on: [push]
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 运行 Python
+        run: python 足球_量子_云.py
