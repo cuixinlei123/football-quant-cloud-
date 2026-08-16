@@ -1,24 +1,41 @@
-name: 运行我的脚本
+yaml
+
+name: 运行脚本
 
 on:
-  push:
-    branches:
-      - 主要的
+
+push:
+
+branches:
+
+• 主要的
 
 jobs:
-  run-script:
-    runs-on: ubuntu-latest
-    steps:
-      # 1. 把代码下载下来
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x' 
+运行任务:
 
-      # 3. 【关键修正】运行你的脚本
-      - name: Run Python
-        run: python 足球量子云.py
+runs-on: ubuntu-latest
+
+steps:
+
+# 1. 拉取代码
+
+• name: 检出代码
+
+uses: actions/checkout@v4
+
+# 2. 设置 Python
+
+• name: 设置 Python 环境
+
+uses: actions/setup-python@v4
+
+with:
+
+python-version: '3.x'
+
+# 3. 运行脚本（这里用的是新名字 main.py）
+
+• name: 执行 Python
+
+run: python main.py
