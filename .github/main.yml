@@ -1,45 +1,27 @@
-yaml
-
 name: FootballQuant Daily
 
 on:
-
-schedule:
-
-• cron: '0 20 * * *'
-
-workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
 
 jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-run-script:
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-runs-on: ubuntu-latest
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-steps:
-
-• name: Checkout code
-
-uses: actions/checkout@v2
-
-• name: Set up Python
-
-uses: actions/setup-python@v2
-
-with:
-
-python-version: '3.x'
-
-• name: Install dependencies
-
-run: |
-
-python -m pip install --upgrade pip
-
-pip install -r requirements.txt
-
-• name: Run script
-
-run: |
-
-python 足球量子云.py
+      - name: Run script
+        run: |
+          python 足球_量子_云.py
