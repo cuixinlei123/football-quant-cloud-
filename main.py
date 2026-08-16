@@ -3,60 +3,22 @@ import requests
 from datetime import datetime
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
-
-def fetch_understat_api(league: str, season: str):
-    url = f"https://understat.com/api/matches?league={league}&season={season}"
-    resp = requests.get(url, headers=HEADERS, timeout=25)
-    if resp.status_code != 200:
-        print(f"❌ API请求失败，状态码:{resp.status_code}")
-        return []
-    data = resp.json()
-    match_list = []
-    for item in data:
-        match_list.append({
-            "match_date": item["datetime"],
-            "home_team": item["h"]["title"],
-            "away_team": item["a"]["title"],
-            "home_goals": item["goals"]["h"],
-            "away_goals": item["goals"]["a"],
-            "home_xg": item["xG"]["h"],
-            "away_xg": item["xG"]["a"],
-            "status": item["isResult"]
-        })
-    return match_list
 
 def main():
     run_time = datetime.now()
     print(f"===== 足球量化系统启动 {run_time} =====")
 
-    target_league = "EPL"
-    target_season = "2024"
-    print(f"API抓取 {target_league} {target_season} xG赛事数据...")
-    match_list = fetch_understat_api(target_league, target_season)
+    # 先输出测试文件，验证运行正常
+    rows = [["match_date","home_team","away_team","home_goals","away_goals"]]
 
     output_file = "football_result.csv"
-    rows = [
-        ["match_date","home_team","away_team","home_goals","away_goals","home_xg","away_xg","status"]
-    ]
-    for m in match_list:
-        rows.append([
-            m["match_date"],
-            m["home_team"],
-            m["away_team"],
-            m["home_goals"],
-            m["away_goals"],
-            m["home_xg"],
-            m["away_xg"],
-            m["status"]
-        ])
-
     with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerows(rows)
 
-    print(f"✅ 抓取完成，一共 {len(match_list)} 场比赛，输出：{output_file}")
+    print("✅ 测试文件生成成功，环境正常。")
     print("===== 执行结束 =====")
 
 if __name__ == "__main__":
