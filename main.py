@@ -1,14 +1,29 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-main.py — 足球量子云 主程序
-"""
+import csv
+import time
+from datetime import datetime
 
-print("=" * 50)
-print("🚀 足球量子云 程序启动")
-print(f"📅 当前时间: {__import__('datetime').datetime.now()}")
-print("=" * 50)
+# ======================
+# 足球量化简易主程序模板
+# 可扩展：接入FBref / Understat / 赛事数据，训练模型，输出预测
+# ======================
 
-# ===== 在这里写你的核心逻辑 =====
+def main():
+    print(f"===== 足球量化系统启动 {datetime.now()} =====")
 
-print("✅ 程序运行完毕")
+    # 示例输出CSV文件，后续替换成真实抓取、预测逻辑
+    output_file = "football_result.csv"
+
+    rows = [
+        ["match_date", "league", "home_team", "away_team", "prediction", "confidence"],
+        [str(datetime.now()), "demo", "Demo主队", "Demo客队", "暂无预测", 0.0]
+    ]
+
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+
+    print(f"✅ 数据输出完成，文件：{output_file}")
+    print("===== 运行结束 =====")
+
+if __name__ == "__main__":
+    main()
