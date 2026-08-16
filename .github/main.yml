@@ -21,4 +21,4 @@ jobs:
 
       # 3. 【关键修正】运行你的脚本
       - name: Run Python
-        run: python 足球_量子_云.py
+        run: python 足球量子云.py
