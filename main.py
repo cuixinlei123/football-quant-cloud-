@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 
 # ==============================
-# 足球量化系统 V3 Understat完整解析
+# 足球量化系统 V4 修复Understat JSON解析
 # ==============================
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
@@ -15,13 +15,19 @@ def parse_understat_matches(league: str, season: str):
     url = f"https://understat.com/league/{league}/{season}"
     resp = requests.get(url, headers=HEADERS, timeout=30)
     html = resp.text
-    # 提取隐藏JSON字符串
-    pattern = r"datesData\s*=\s*JSON\.parse\('([^']+)'\)"
-    match = re.search(pattern, html)
-    if not match:
+
+    # 先找到 datesData 完整块
+    raw_match = re.search(r'datesData\s*=\s*JSON\.parse\((.*?)\);', html, re.DOTALL)
+    if not raw_match:
+        print("❌ 没有找到datesData")
         return []
-    raw = match.group(1).encode("utf-8").decode("unicode_escape")
+    raw_str = raw_match.group(1)
+    # 去掉外层引号
+    raw_str = raw_str.strip().strip("'")
+    # 双重反转义处理
+    raw = bytes(raw_str, "utf-8").decode("unicode_escape")
     data = json.loads(raw)
+
     result = []
     for item in data:
         result.append({
@@ -41,7 +47,7 @@ def main():
     print(f"===== 足球量化系统启动 {run_time} =====")
 
     target_league = "EPL"
-    target_season = "2025"
+    target_season = "2024"
     print(f"抓取 {target_league} {target_season} xG赛事数据...")
     match_list = parse_understat_matches(target_league, target_season)
 
