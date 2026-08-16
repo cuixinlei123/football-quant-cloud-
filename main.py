@@ -9,6 +9,7 @@ HEADERS = {
 }
 
 def fetch_fbref_season(league_url):
+    time.sleep(3)
     tables = pd.read_html(league_url)
     match_table = tables[1]
     match_table = match_table.dropna(subset=["Date"])
@@ -18,13 +19,11 @@ def main():
     run_time = datetime.now()
     print(f"===== 足球量化系统启动 {run_time} =====")
 
-    # 英超2024‑2025赛季FBref地址
     url = "https://fbref.com/en/comps/9/2024-2025/schedule/2024-2025-Premier-League-Scores-and-Fixtures"
     print(f"正在抓取：{url}")
 
     df = fetch_fbref_season(url)
 
-    # 导出CSV
     out_file = "football_result.csv"
     df.to_csv(out_file, index=False, encoding="utf-8-sig")
 
