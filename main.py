@@ -1,49 +1,31 @@
 import csv
-import re
-import json
+import requests
 from datetime import datetime
-from playwright.sync_api import sync_playwright
 
-# ==============================
-# V6 Playwright无头浏览器渲染，获取异步加载xG数据
-# ==============================
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
+}
 
-def parse_understat_matches(league: str, season: str):
-    url = f"https://understat.com/league/{league}/{season}"
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(user_agent="Mozilla/5.0 (X11; Linux x86_64) Chrome/124.0.0.0 Safari/537.36")
-        page.goto(url, timeout=60000)
-        page.wait_for_timeout(4000)
-        html = page.content()
-        browser.close()
-
-    # 扫描全部JSON.parse
-    pattern = r'JSON\.parse\(\s*\'(.*?)\'\s*\)'
-    all_chunks = re.findall(pattern, html, re.DOTALL)
-
-    for raw_chunk in all_chunks:
-        try:
-            decoded = bytes(raw_chunk, "utf-8").decode("unicode_escape")
-            data = json.loads(decoded)
-            if isinstance(data, list) and len(data) > 0 and "h" in data[0]:
-                match_list = []
-                for item in data:
-                    match_list.append({
-                        "match_date": item["datetime"],
-                        "home_team": item["h"]["title"],
-                        "away_team": item["a"]["title"],
-                        "home_goals": item["goals"]["h"],
-                        "away_goals": item["goals"]["a"],
-                        "home_xg": item["xG"]["h"],
-                        "away_xg": item["xG"]["a"],
-                        "status": item["isResult"]
-                    })
-                return match_list
-        except Exception:
-            continue
-    print("❌ 浏览器渲染后仍然找不到比赛数组")
-    return []
+def fetch_understat_api(league: str, season: str):
+    url = f"https://understat.com/api/matches?league={league}&season={season}"
+    resp = requests.get(url, headers=HEADERS, timeout=25)
+    if resp.status_code != 200:
+        print(f"❌ API请求失败，状态码:{resp.status_code}")
+        return []
+    data = resp.json()
+    match_list = []
+    for item in data:
+        match_list.append({
+            "match_date": item["datetime"],
+            "home_team": item["h"]["title"],
+            "away_team": item["a"]["title"],
+            "home_goals": item["goals"]["h"],
+            "away_goals": item["goals"]["a"],
+            "home_xg": item["xG"]["h"],
+            "away_xg": item["xG"]["a"],
+            "status": item["isResult"]
+        })
+    return match_list
 
 def main():
     run_time = datetime.now()
@@ -51,8 +33,8 @@ def main():
 
     target_league = "EPL"
     target_season = "2024"
-    print(f"抓取 {target_league} {target_season} xG赛事数据...")
-    match_list = parse_understat_matches(target_league, target_season)
+    print(f"API抓取 {target_league} {target_season} xG赛事数据...")
+    match_list = fetch_understat_api(target_league, target_season)
 
     output_file = "football_result.csv"
     rows = [
@@ -75,7 +57,7 @@ def main():
         writer.writerows(rows)
 
     print(f"✅ 抓取完成，一共 {len(match_list)} 场比赛，输出：{output_file}")
-    print("===== 运行结束 =====")
+    print("===== 执行结束 =====")
 
 if __name__ == "__main__":
     main()
