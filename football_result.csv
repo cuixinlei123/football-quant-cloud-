@@ -1,2 +1,2 @@
-﻿match_date,league,home_team,away_team,prediction,confidence
-2026-08-16 14:03:20.641429,demo,Demo主队,Demo客队,暂无预测,0.0
+﻿run_datetime,league,season,status,info
+2026-08-16 14:08:04.573167,EPL,2025,fail,'ascii' codec can't encode character '\u2011' in position 4: ordinal not in range(128)
