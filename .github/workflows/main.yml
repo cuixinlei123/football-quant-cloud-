@@ -1,26 +1,66 @@
-name: Run Python Task
-on:
-  push:
-  schedule:
-    - cron: '0 18 * * *'
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run script
-        run: python main.py
-      - name: Commit & Push new data
-        run: |
-          git config --global user.name "github‑actions[bot]"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Auto update football data" || echo "Nothing changed"
-          git push
+import csv
+import requests
+from datetime import datetime
+
+# ==============================
+# V7 Understat 公开API直接拉取，无浏览器
+# ==============================
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
+}
+
+def fetch_understat_api(league: str, season: str):
+    url = f"https://understat.com/api/matches?league={league}&season={season}"
+    resp = requests.get(url, headers=HEADERS, timeout=30)
+    if resp.status_code != 200:
+        print(f"❌ API请求失败，状态码:{resp.status_code}")
+        return []
+    data = resp.json()
+    match_list = []
+    for item in data:
+        match_list.append({
+            "match_date": item["datetime"],
+            "home_team": item["h"]["title"],
+            "away_team": item["a"]["title"],
+            "home_goals": item["goals"]["h"],
+            "away_goals": item["goals"]["a"],
+            "home_xg": item["xG"]["h"],
+            "away_xg": item["xG"]["a"],
+            "status": item["isResult"]
+        })
+    return match_list
+
+def main():
+    run_time = datetime.now()
+    print(f"===== 足球量化系统启动 {run_time} =====")
+
+    target_league = "EPL"
+    target_season = "2024"
+    print(f"API抓取 {target_league} {target_season} xG赛事数据...")
+    match_list = fetch_understat_api(target_league, target_season)
+
+    output_file = "football_result.csv"
+    rows = [
+        ["match_date","home_team","away_team","home_goals","away_goals","home_xg","away_xg","status"]
+    ]
+    for m in match_list:
+        rows.append([
+            m["match_date"],
+            m["home_team"],
+            m["away_team"],
+            m["home_goals"],
+            m["away_goals"],
+            m["home_xg"],
+            m["away_xg"],
+            m["status"]
+        ])
+
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+
+    print(f"✅ API抓取完成，一共 {len(match_list)} 场比赛，输出：{output_file}")
+    print("===== 运行结束 =====")
+
+if __name__ == "__main__":
+    main()
