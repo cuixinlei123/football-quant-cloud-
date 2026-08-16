@@ -1,57 +1,71 @@
 import csv
-import time
+import re
+import json
 import requests
 from datetime import datetime
 
 # ==============================
-# 足球量化系统 V2：接入 Understat xG 数据源
+# 足球量化系统 V3 Understat完整解析
 # ==============================
-
 HEADERS = {
-    "User‑Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 }
 
-def get_understat_league_matches(league: str, season: str):
-    """
-    league可选 : EPL, La_Liga, Bundesliga, Serie_A, Ligue_1
-    season格式: "2025" 代表2025‑26赛季
-    """
+def parse_understat_matches(league: str, season: str):
     url = f"https://understat.com/league/{league}/{season}"
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=25)
-        resp.raise_for_status()
-        return {"status":"ok","html":resp.text}
-    except Exception as e:
-        return {"status":"error","msg":str(e)}
-
+    resp = requests.get(url, headers=HEADERS, timeout=30)
+    html = resp.text
+    # 提取隐藏JSON字符串
+    pattern = r"datesData\s*=\s*JSON\.parse\('([^']+)'\)"
+    match = re.search(pattern, html)
+    if not match:
+        return []
+    raw = match.group(1).encode("utf-8").decode("unicode_escape")
+    data = json.loads(raw)
+    result = []
+    for item in data:
+        result.append({
+            "match_date": item["datetime"],
+            "home_team": item["h"]["title"],
+            "away_team": item["a"]["title"],
+            "home_goals": item["goals"]["h"],
+            "away_goals": item["goals"]["a"],
+            "home_xg": item["xG"]["h"],
+            "away_xg": item["xG"]["a"],
+            "status": item["isResult"]
+        })
+    return result
 
 def main():
     run_time = datetime.now()
     print(f"===== 足球量化系统启动 {run_time} =====")
 
-    # 抓取配置，你可以在这里修改联赛、赛季
     target_league = "EPL"
     target_season = "2025"
-
-    print(f"正在抓取 {target_league} {target_season} 赛季xG数据...")
-    res = get_understat_league_matches(target_league, target_season)
+    print(f"抓取 {target_league} {target_season} xG赛事数据...")
+    match_list = parse_understat_matches(target_league, target_season)
 
     output_file = "football_result.csv"
-
-    # 输出CSV表头
     rows = [
-        ["run_datetime","league","season","status","info"]
+        ["match_date","home_team","away_team","home_goals","away_goals","home_xg","away_xg","status"]
     ]
-    if res["status"] == "ok":
-        rows.append([str(run_time), target_league, target_season, "success", "页面抓取成功，下一步解析JSON提取比赛"])
-    else:
-        rows.append([str(run_time), target_league, target_season, "fail", res["msg"]])
+    for m in match_list:
+        rows.append([
+            m["match_date"],
+            m["home_team"],
+            m["away_team"],
+            m["home_goals"],
+            m["away_goals"],
+            m["home_xg"],
+            m["away_xg"],
+            m["status"]
+        ])
 
-    with open(output_file, "w", newline="", encoding="utf‑8‑sig") as f:
+    with open(output_file, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerows(rows)
 
-    print(f"✅ 抓取执行完成，输出文件：{output_file}")
+    print(f"✅ 抓取完成，一共 {len(match_list)} 场比赛，输出：{output_file}")
     print("===== 运行结束 =====")
 
 if __name__ == "__main__":
