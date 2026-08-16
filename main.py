@@ -5,10 +5,10 @@ import requests
 from datetime import datetime
 
 # ==============================
-# 足球量化系统 V4 修复Understat JSON解析
+# V5 全局扫描JSON.parse，适配新版Understat页面
 # ==============================
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
 }
 
 def parse_understat_matches(league: str, season: str):
@@ -16,31 +16,35 @@ def parse_understat_matches(league: str, season: str):
     resp = requests.get(url, headers=HEADERS, timeout=30)
     html = resp.text
 
-    # 先找到 datesData 完整块
-    raw_match = re.search(r'datesData\s*=\s*JSON\.parse\((.*?)\);', html, re.DOTALL)
-    if not raw_match:
-        print("❌ 没有找到datesData")
-        return []
-    raw_str = raw_match.group(1)
-    # 去掉外层引号
-    raw_str = raw_str.strip().strip("'")
-    # 双重反转义处理
-    raw = bytes(raw_str, "utf-8").decode("unicode_escape")
-    data = json.loads(raw)
+    # 全局匹配所有 JSON.parse('....')
+    pattern = r'JSON\.parse\(\s*\'(.*?)\'\s*\)'
+    all_matches = re.findall(pattern, html, re.DOTALL)
 
-    result = []
-    for item in data:
-        result.append({
-            "match_date": item["datetime"],
-            "home_team": item["h"]["title"],
-            "away_team": item["a"]["title"],
-            "home_goals": item["goals"]["h"],
-            "away_goals": item["goals"]["a"],
-            "home_xg": item["xG"]["h"],
-            "away_xg": item["xG"]["a"],
-            "status": item["isResult"]
-        })
-    return result
+    for raw_chunk in all_matches:
+        try:
+            # 双重反转义
+            decoded = bytes(raw_chunk, "utf-8").decode("unicode_escape")
+            data = json.loads(decoded)
+            # 判断是不是比赛数组（包含h、a字段）
+            if isinstance(data, list) and len(data) > 0 and "h" in data[0]:
+                print(f"✅成功识别比赛数组，共{len(data)}场")
+                match_list = []
+                for item in data:
+                    match_list.append({
+                        "match_date": item["datetime"],
+                        "home_team": item["h"]["title"],
+                        "away_team": item["a"]["title"],
+                        "home_goals": item["goals"]["h"],
+                        "away_goals": item["goals"]["a"],
+                        "home_xg": item["xG"]["h"],
+                        "away_xg": item["xG"]["a"],
+                        "status": item["isResult"]
+                    })
+                return match_list
+        except Exception:
+            continue
+    print("❌ 在页面内没有找到比赛JSON数组")
+    return []
 
 def main():
     run_time = datetime.now()
