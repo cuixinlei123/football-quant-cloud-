@@ -1,33 +1,32 @@
 import csv
 import re
 import json
-import requests
 from datetime import datetime
+from playwright.sync_api import sync_playwright
 
 # ==============================
-# V5 全局扫描JSON.parse，适配新版Understat页面
+# V6 Playwright无头浏览器渲染，获取异步加载xG数据
 # ==============================
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
-}
 
 def parse_understat_matches(league: str, season: str):
     url = f"https://understat.com/league/{league}/{season}"
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    html = resp.text
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(user_agent="Mozilla/5.0 (X11; Linux x86_64) Chrome/124.0.0.0 Safari/537.36")
+        page.goto(url, timeout=60000)
+        page.wait_for_timeout(4000)
+        html = page.content()
+        browser.close()
 
-    # 全局匹配所有 JSON.parse('....')
+    # 扫描全部JSON.parse
     pattern = r'JSON\.parse\(\s*\'(.*?)\'\s*\)'
-    all_matches = re.findall(pattern, html, re.DOTALL)
+    all_chunks = re.findall(pattern, html, re.DOTALL)
 
-    for raw_chunk in all_matches:
+    for raw_chunk in all_chunks:
         try:
-            # 双重反转义
             decoded = bytes(raw_chunk, "utf-8").decode("unicode_escape")
             data = json.loads(decoded)
-            # 判断是不是比赛数组（包含h、a字段）
             if isinstance(data, list) and len(data) > 0 and "h" in data[0]:
-                print(f"✅成功识别比赛数组，共{len(data)}场")
                 match_list = []
                 for item in data:
                     match_list.append({
@@ -43,7 +42,7 @@ def parse_understat_matches(league: str, season: str):
                 return match_list
         except Exception:
             continue
-    print("❌ 在页面内没有找到比赛JSON数组")
+    print("❌ 浏览器渲染后仍然找不到比赛数组")
     return []
 
 def main():
